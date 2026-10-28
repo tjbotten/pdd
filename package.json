@@ -1,0 +1,28 @@
+{
+  "name": "pgs-displays",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Borderless Chromium-on-Pi parking bay availability kiosk driven by MQTT",
+  "type": "module",
+  "scripts": {
+    "broker": "docker compose up -d mosquitto",
+    "broker:down": "docker compose down",
+    "broker:local": "mosquitto -c mosquitto/mosquitto.conf",
+    "broker:node": "node scripts/dev-broker.mjs",
+    "serve": "python3 -m http.server 8080",
+    "publish": "node scripts/publish-demo.mjs",
+    "publish:once": "node scripts/publish-demo.mjs --once",
+    "demo": "npm run broker && npm run publish",
+    "capture": "node scripts/capture-demo.mjs"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1"
+  },
+  "devDependencies": {
+    "aedes": "^1.2.0",
+    "ws": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

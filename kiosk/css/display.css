@@ -1,0 +1,231 @@
+:root {
+  --bg: #000000;
+  --label: #ffffff;
+  --muted: #8a8a8a;
+  --offline: #ffb020;
+  --row-gap: clamp(1.2rem, 3.2vh, 2.8rem);
+  --pad-x: clamp(1.5rem, 5vw, 3.5rem);
+  --pad-y: clamp(1.5rem, 4vh, 3rem);
+  --count-size: clamp(4.5rem, 14vh, 9.5rem);
+  --label-size: clamp(1.15rem, 3.2vw, 2rem);
+  --header-size: clamp(1.6rem, 4.5vw, 2.6rem);
+  --icon-size: clamp(2.4rem, 6vw, 3.6rem);
+  --font-ui: "Barlow", "Segoe UI", sans-serif;
+  --font-count: "Orbitron", "Courier New", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--label);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+body.debug-cursor {
+  cursor: default;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.screen-root {
+  width: 100%;
+  height: 100%;
+}
+
+/* —— Bay counts screen —— */
+.bay-screen {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  padding: var(--pad-y) var(--pad-x);
+  gap: clamp(0.8rem, 2vh, 1.5rem);
+}
+
+.bay-header {
+  text-align: center;
+  font-size: var(--header-size);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding-top: 0.4rem;
+}
+
+.bay-rows {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: var(--row-gap);
+  min-height: 0;
+}
+
+.bay-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: clamp(4.5rem, 12vh, 8rem);
+}
+
+.bay-meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  min-width: 0;
+}
+
+.bay-icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+}
+
+.bay-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bay-label {
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bay-count {
+  font-family: var(--font-count);
+  font-size: var(--count-size);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px color-mix(in srgb, currentColor 35%, transparent);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.bay-count.updated {
+  transform: scale(1.04);
+}
+
+.bay-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding-bottom: 0.5rem;
+  opacity: 0.95;
+}
+
+.bay-footer img,
+.bay-footer .logo {
+  width: clamp(2rem, 5vw, 2.8rem);
+  height: clamp(2rem, 5vw, 2.8rem);
+}
+
+.bay-footer-name {
+  font-size: clamp(1rem, 2.8vw, 1.45rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* —— Stub alternate screens —— */
+.stub-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--pad-y) var(--pad-x);
+  text-align: center;
+  gap: 1rem;
+}
+
+.stub-screen h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 600;
+}
+
+.stub-screen p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+  max-width: 28rem;
+}
+
+/* —— Offline cue —— */
+.offline-indicator {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--offline) 55%, transparent);
+  background: rgba(20, 14, 0, 0.92);
+  color: var(--offline);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.95;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.offline-indicator[hidden] {
+  display: none;
+}
+
+.offline-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--offline);
+  box-shadow: 0 0 8px var(--offline);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Portrait kiosk: keep composition tall; desktop browsers can simulate with narrow window */
+@media (min-aspect-ratio: 3/4) {
+  .app {
+    max-width: min(56vh, 480px);
+    margin: 0 auto;
+    border-left: 1px solid #111;
+    border-right: 1px solid #111;
+  }
+}
