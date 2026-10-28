@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Capture portrait kiosk screenshots for demo evidence.
+ * Optional: npm install --save-dev puppeteer  (not a runtime dependency)
  */
 import puppeteer from "puppeteer";
 import { mkdir } from "node:fs/promises";
