@@ -1,0 +1,57 @@
+{
+  "displayId": "pillar-b1-east",
+  "siteId": "pgs-demo",
+  "levelId": "B1",
+  "levelLabel": "Level B1",
+  "screen": "bay-counts",
+  "broker": {
+    "url": "ws://localhost:9001",
+    "username": null,
+    "password": null,
+    "clientIdPrefix": "pgs-kiosk"
+  },
+  "topics": {
+    "availability": "pgs/pgs-demo/levels/B1/availability",
+    "screen": "pgs/pgs-demo/displays/pillar-b1-east/screen"
+  },
+  "bayTypes": [
+    {
+      "id": "general",
+      "label": "GENERAL",
+      "color": "#39ff14",
+      "icon": "car",
+      "pad": 3
+    },
+    {
+      "id": "disabled",
+      "label": "DISABLED",
+      "color": "#3aa0ff",
+      "icon": "accessibility",
+      "pad": 2
+    },
+    {
+      "id": "ev",
+      "label": "EV",
+      "color": "#c44dff",
+      "icon": "ev",
+      "pad": 2
+    },
+    {
+      "id": "wealth_and_investment",
+      "label": "WEALTH AND INVESTMENT",
+      "color": "#ffffff",
+      "icon": null,
+      "pad": 2
+    }
+  ],
+  "branding": {
+    "name": "Standard Bank",
+    "logo": "assets/logo.svg"
+  },
+  "defaults": {
+    "general": 124,
+    "disabled": 8,
+    "ev": 2,
+    "wealth_and_investment": 12
+  }
+}
