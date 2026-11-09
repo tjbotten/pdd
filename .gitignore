@@ -1,0 +1,8 @@
+.pio/
+.vscode/
+.pioenvs/
+.piolibdeps/
+*.elf
+*.bin
+sdkconfig.*
+.DS_Store
