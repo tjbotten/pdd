@@ -56,7 +56,7 @@ def forecast_url() -> str:
         "&hourly=temperature_2m,weather_code,precipitation_probability"
         "&daily=weather_code,temperature_2m_max,temperature_2m_min"
         "&timezone=Africa%2FJohannesburg"
-        "&forecast_days=2"
+        "&forecast_days=4"
         "&wind_speed_unit=kmh"
     )
 
@@ -125,17 +125,22 @@ def _day(record: dict, index: int, label: str) -> dict | None:
     highs = daily.get("temperature_2m_max") or []
     lows = daily.get("temperature_2m_min") or []
     codes = daily.get("weather_code") or []
+    dates = daily.get("time") or []
     if index >= len(highs) or index >= len(lows):
         return None
     high = _round_number(highs[index])
     low = _round_number(lows[index])
     if high is None or low is None:
         return None
+    code = codes[index] if index < len(codes) else None
+    date = dates[index] if index < len(dates) and isinstance(dates[index], str) else None
     return {
         "label": label,
+        "date": date,
         "high": high,
         "low": low,
-        "condition": condition_label(codes[index] if index < len(codes) else None),
+        "condition": condition_label(code),
+        "code": int(code) if isinstance(code, (int, float)) and not isinstance(code, bool) else None,
     }
 
 
@@ -146,13 +151,19 @@ def parse_place(record: dict, place: dict) -> dict:
     temperature = _round_number(current.get("temperature_2m"))
     if temperature is None:
         raise UpstreamError("no temperature")
-    days = [day for day in (_day(record, 0, "Today"), _day(record, 1, "Tomorrow")) if day]
+    days = []
+    for index, label in ((0, "Today"), (1, "Tomorrow"), (2, ""), (3, "")):
+        day = _day(record, index, label)
+        if day:
+            days.append(day)
+    code = current.get("weather_code")
     return {
         "id": place["id"],
         "name": place["name"],
         "available": True,
         "temperature": temperature,
-        "condition": condition_label(current.get("weather_code")),
+        "condition": condition_label(code),
+        "code": int(code) if isinstance(code, (int, float)) and not isinstance(code, bool) else None,
         "windKmh": _round_number(current.get("wind_speed_10m")),
         "days": days,
         "hours": _hours_ahead(record),

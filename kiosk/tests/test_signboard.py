@@ -42,64 +42,78 @@ class TrafficTests(unittest.TestCase):
 
         report = traffic.build_report(fetch=fetch, key="")
         self.assertFalse(report["available"])
+        self.assertFalse(report["colours"])
         self.assertEqual(report["reason"], "missing_key")
-        self.assertEqual(
-            [route["to"] for route in report["routes"]],
-            ["Sandton", "Centurion", "Roodepoort"],
-        )
-        for route in report["routes"]:
-            self.assertFalse(route["available"])
-            self.assertNotIn("liveSeconds", route)
-            self.assertNotIn("typicalSeconds", route)
-            self.assertNotIn("freeFlowSeconds", route)
+        self.assertEqual(report["incidents"], [])
+        self.assertEqual(report["center"]["latitude"], -26.146)
+        self.assertEqual(report["center"]["longitude"], 28.041)
+        self.assertEqual(report["zoom"], 12)
+        self.assertNotIn("routes", report)
+        self.assertNotIn("liveSeconds", json.dumps(report))
 
-    def test_parses_live_typical_and_freeflow(self):
+    def test_incidents_keep_only_provider_descriptions(self):
         body = {
-            "routes": [
+            "incidents": [
                 {
-                    "summary": {
-                        "lengthInMeters": 3428,
-                        "travelTimeInSeconds": 526,
-                        "trafficDelayInSeconds": 0,
-                        "noTrafficTravelTimeInSeconds": 518,
-                        "historicTrafficTravelTimeInSeconds": 540,
-                        "liveTrafficIncidentsTravelTimeInSeconds": 526,
+                    "properties": {
+                        "magnitudeOfDelay": 3,
+                        "from": "M1",
+                        "events": [{"description": "stationary traffic"}],
                     }
-                }
+                },
+                {"properties": {"iconCategory": 1, "events": [{}]}},
+                {"properties": {"events": [{"description": "  road closed  "}]}},
             ]
         }
-        parsed = traffic.parse_route_body(body)
-        self.assertEqual(parsed["liveSeconds"], 526)
-        self.assertEqual(parsed["typicalSeconds"], 540)
-        self.assertEqual(parsed["freeFlowSeconds"], 518)
-        self.assertEqual(parsed["distanceMeters"], 3428)
+        parsed = traffic.parse_incidents(body)
+        self.assertEqual(
+            [item["text"] for item in parsed],
+            ["stationary traffic · M1", "road closed"],
+        )
+        self.assertNotIn("Accident", json.dumps(parsed))
 
-    def test_one_failed_route_keeps_the_others(self):
+    def test_failed_lookup_does_not_invent_incidents(self):
+        def fetch(_url):
+            raise UpstreamError("down")
+
+        report = traffic.build_report(fetch=fetch, key="test-key")
+        self.assertFalse(report["colours"])
+        self.assertEqual(report["incidents"], [])
+        self.assertNotIn("test-key", json.dumps(report))
+
+    def test_working_key_returns_colours_and_real_incidents_only(self):
+        seen = []
+
         def fetch(url):
-            if "-25.8564676" in url:
-                raise UpstreamError("down")
+            seen.append(url)
             return {
-                "routes": [
-                    {
-                        "summary": {
-                            "lengthInMeters": 8000,
-                            "travelTimeInSeconds": 900,
-                            "historicTrafficTravelTimeInSeconds": 700,
-                            "noTrafficTravelTimeInSeconds": 600,
-                        }
-                    }
+                "incidents": [
+                    {"properties": {"events": [{"description": "slow traffic"}], "from": "Oxford Rd"}}
                 ]
             }
 
         report = traffic.build_report(fetch=fetch, key="test-key")
-        by_id = {route["id"]: route for route in report["routes"]}
-        self.assertTrue(report["available"])
-        self.assertTrue(by_id["sandton"]["available"])
-        self.assertEqual(by_id["sandton"]["liveSeconds"], 900)
-        self.assertFalse(by_id["centurion"]["available"])
-        self.assertNotIn("liveSeconds", by_id["centurion"])
-        self.assertTrue(by_id["roodepoort"]["available"])
+        self.assertTrue(report["colours"])
+        self.assertEqual(report["incidents"], [{"text": "slow traffic · Oxford Rd"}])
+        self.assertEqual(len(seen), 1)
+        self.assertIn("incidentDetails", seen[0])
         self.assertNotIn("test-key", json.dumps(report))
+        west, south, east, north = traffic.view_bbox()
+        self.assertLess(west, 28.041)
+        self.assertGreater(east, 28.041)
+        self.assertLess(south, -26.146)
+        self.assertGreater(north, -26.146)
+        self.assertLess(east - west, 0.5)
+        self.assertLess(north - south, 0.5)
+
+    def test_tile_proxy_is_limited_to_the_rosebank_view(self):
+        x0, y0, x1, y1 = traffic.tile_bounds()
+        self.assertTrue(traffic.valid_tile(12, x0, y0))
+        self.assertTrue(traffic.valid_tile(12, x1, y1))
+        self.assertFalse(traffic.valid_tile(11, x0, y0))
+        self.assertFalse(traffic.valid_tile(12, 0, 0))
+        self.assertLess(x1 - x0, 8)
+        self.assertLess(y1 - y0, 8)
 
 
 class WeatherTests(unittest.TestCase):
@@ -274,9 +288,16 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         for band in ("band-traffic", "band-weather", "band-news", "band-announcements"):
             self.assertIn(f'id="{band}"', html)
+        self.assertIn("Johannesburg Traffic", html)
+        self.assertIn("Current Weather", html)
+        self.assertIn("Company Events", html)
+        self.assertIn(">News<", html)
         css = (ROOT / "static" / "display.css").read_text(encoding="utf-8")
         js = (ROOT / "static" / "display.js").read_text(encoding="utf-8")
         self.assertIn("cursor: none", css)
+        self.assertIn('grid-template-areas:', css)
+        self.assertIn('"traffic weather"', css)
+        self.assertIn('"events news"', css)
         self.assertNotIn("innerHTML", js)
 
     def test_traffic_endpoint_stays_empty_without_a_key(self):
@@ -284,9 +305,11 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         payload = json.loads(body)
         self.assertFalse(payload["available"])
+        self.assertFalse(payload["colours"])
         self.assertEqual(payload["reason"], "missing_key")
+        self.assertEqual(payload["incidents"], [])
         self.assertNotIn("liveSeconds", body)
-        self.assertEqual(len(payload["routes"]), 3)
+        self.assertNotIn("routes", payload)
 
     def test_announcements_round_trip_is_shared_and_escaped(self):
         status, body = self._open("/api/announcements")
@@ -330,6 +353,22 @@ class ServerTests(unittest.TestCase):
             response.read()
         _status, body = self._open("/api/announcements")
         self.assertEqual(json.loads(body)["posts"], [])
+
+    def test_flow_tiles_stay_off_without_a_key_and_other_zooms_are_rejected(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        x0, y0, _x1, _y1 = traffic.tile_bounds()
+        connection.request("GET", f"/tiles/flow/12/{x0}/{y0}.png")
+        response = connection.getresponse()
+        self.assertEqual(response.status, 404)
+        response.read()
+        connection.request("GET", "/tiles/base/3/0/0.png")
+        response = connection.getresponse()
+        self.assertEqual(response.status, 404)
+        response.read()
+        connection.request("GET", "/tiles/base/12/0/0.png")
+        response = connection.getresponse()
+        self.assertEqual(response.status, 404)
+        connection.close()
 
     def test_static_path_cannot_escape(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)

@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from . import news, store, traffic, weather
+from .http_util import UpstreamError
 from .config import (
     ANNOUNCEMENT_MAX_CHARS,
     ANNOUNCEMENT_MAX_POSTS,
@@ -28,6 +29,7 @@ from .config import (
     admin_password,
     cookie_secure,
     database_path,
+    tomtom_api_key,
 )
 from .sessions import Sessions, password_matches
 
@@ -97,6 +99,28 @@ def _now() -> str:
     return datetime.now(JOHANNESBURG).isoformat(timespec="seconds")
 
 
+class TileCache:
+    """Keep map tiles in memory so the two kiosks share one upstream fetch."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._items: dict[tuple, tuple[float, bytes]] = {}
+
+    def get(self, key: tuple, ttl: float, produce) -> bytes:
+        now = time.monotonic()
+        with self._lock:
+            hit = self._items.get(key)
+            if hit and now - hit[0] < ttl:
+                return hit[1]
+        data = produce()
+        if not isinstance(data, (bytes, bytearray)) or not bytes(data).startswith(b"\x89PNG"):
+            raise UpstreamError("not a png")
+        stored = bytes(data)
+        with self._lock:
+            self._items[key] = (time.monotonic(), stored)
+        return stored
+
+
 class App:
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or database_path()
@@ -105,6 +129,7 @@ class App:
         self.traffic = FeedCache(TRAFFIC_TTL_SECONDS, TRAFFIC_GRACE_SECONDS, traffic.build_report)
         self.weather = FeedCache(WEATHER_TTL_SECONDS, WEATHER_GRACE_SECONDS, weather.build_report)
         self.news = FeedCache(NEWS_TTL_SECONDS, NEWS_GRACE_SECONDS, news.build_report)
+        self.tiles = TileCache()
 
 
 def create_handler(app: App):
@@ -137,6 +162,9 @@ def create_handler(app: App):
                 return
             if path == "/favicon.ico":
                 self._empty(204)
+                return
+            if path.startswith("/tiles/"):
+                self._tile(path)
                 return
             if path.startswith("/static/"):
                 self._static(path[len("/static/") :])
@@ -279,6 +307,34 @@ def create_handler(app: App):
             page = (TEMPLATES / "admin.html").read_text(encoding="utf-8").replace("{{BODY}}", body)
             self._bytes(200, page.encode("utf-8"), "text/html; charset=utf-8")
 
+        def _tile(self, path: str) -> None:
+            parts = path.strip("/").split("/")
+            if len(parts) != 5 or parts[0] != "tiles" or not parts[4].endswith(".png"):
+                self._empty(404)
+                return
+            kind, zoom_text, x_text, y_text = parts[1], parts[2], parts[3], parts[4][:-4]
+            if kind not in {"base", "flow"}:
+                self._empty(404)
+                return
+            try:
+                zoom, x, y = int(zoom_text), int(x_text), int(y_text)
+            except ValueError:
+                self._empty(404)
+                return
+            if not traffic.valid_tile(zoom, x, y):
+                self._empty(404)
+                return
+            if kind == "flow" and not tomtom_api_key():
+                self._empty(404)
+                return
+            try:
+                png = app.tiles.get((kind, zoom, x, y), 1800 if kind == "flow" else 6 * 60 * 60, lambda: traffic.fetch_tile(kind, zoom, x, y))
+            except (UpstreamError, OSError, ValueError):
+                self._empty(502)
+                return
+            cache = "public, max-age=1800" if kind == "flow" else "public, max-age=21600"
+            self._bytes(200, png, "image/png", cache=cache)
+
         def _static(self, relative: str) -> None:
             root = STATIC.resolve()
             candidate = (STATIC / relative).resolve()
@@ -309,11 +365,11 @@ def create_handler(app: App):
                 "application/json; charset=utf-8",
             )
 
-        def _bytes(self, status: int, body: bytes, content_type: str) -> None:
+        def _bytes(self, status: int, body: bytes, content_type: str, cache: str = "no-store") -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache)
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
             if content_type.startswith("text/html"):

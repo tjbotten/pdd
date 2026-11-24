@@ -1,109 +1,160 @@
-"""Live driving times from Rosebank via the TomTom Routing API.
+"""Rosebank traffic map.
 
-TomTom is called only when TOMTOM_API_KEY is set. With no key the band stays
-empty: this module never invents a travel time.
-
-Each route asks for every travel-time basis TomTom can return
-(computeTravelTimeFor=all):
-
-- travelTimeInSeconds: best estimate for leaving now, including live traffic
-- historicTrafficTravelTimeInSeconds: typical conditions for this time
-- noTrafficTravelTimeInSeconds: free-flow, as if the roads were empty
+The base map is a plain street map and does not need a key. Traffic colours
+and the incident lines come from TomTom, and only when TOMTOM_API_KEY is set.
+Incident text is copied from the provider's descriptions. Nothing here invents
+a delay, a closure, or an accident.
 """
 
 from __future__ import annotations
 
+import math
 import urllib.parse
-from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 from .config import tomtom_api_key
-from .http_util import UpstreamError, get_json
+from .http_util import UpstreamError, get_bytes, get_json
 
-# Landmarks, not suburb centroids, so the route has a real start and end.
-# Checked against OpenStreetMap on 24 Nov 2026.
-ROUTES = (
-    {
-        "id": "sandton",
-        "origin_name": "Rosebank",
-        "destination_name": "Sandton",
-        "origin": (-26.1447122, 28.0434135),  # Oxford Road, Rosebank
-        "destination": (-26.1090427, 28.0524052),  # Sandton City
-    },
-    {
-        "id": "centurion",
-        "origin_name": "Rosebank",
-        "destination_name": "Centurion",
-        "origin": (-26.1447122, 28.0434135),
-        "destination": (-25.8564676, 28.1869355),  # Centurion Mall
-    },
-    {
-        "id": "roodepoort",
-        "origin_name": "Rosebank",
-        "destination_name": "Roodepoort",
-        "origin": (-26.1447122, 28.0434135),
-        "destination": (-26.1386201, 27.8620396),  # Westgate, Roodepoort
-    },
-)
+# The lobby is in Rosebank. Zoom 12 shows the surrounding suburbs and highways.
+CENTER = (-26.146, 28.041)
+ZOOM = 12
+MAP_WIDTH_PX = 500
+MAP_HEIGHT_PX = 640
+# The proxy only serves tiles that can appear on this fixed Rosebank view.
+TILE_WINDOW_PX = (960, 1200)
+INCIDENT_LIMIT = 4
 
 FetchJson = Callable[[str], dict]
 
 
-def route_url(key: str, origin: tuple[float, float], destination: tuple[float, float]) -> str:
-    locations = f"{origin[0]},{origin[1]}:{destination[0]},{destination[1]}"
+def tile_bounds(
+    latitude: float = CENTER[0],
+    longitude: float = CENTER[1],
+    zoom: int = ZOOM,
+) -> tuple[int, int, int, int]:
+    width, height = TILE_WINDOW_PX
+    center_x, center_y = _world_pixel(latitude, longitude, zoom)
+    x0 = math.floor((center_x - width / 2) / 256)
+    y0 = math.floor((center_y - height / 2) / 256)
+    x1 = math.floor((center_x + width / 2 - 1) / 256)
+    y1 = math.floor((center_y + height / 2 - 1) / 256)
+    limit = 2**zoom
+    return max(0, x0), max(0, y0), min(limit - 1, x1), min(limit - 1, y1)
+
+
+def valid_tile(zoom: int, x: int, y: int) -> bool:
+    if zoom != ZOOM:
+        return False
+    x0, y0, x1, y1 = tile_bounds()
+    return x0 <= x <= x1 and y0 <= y <= y1
+
+
+def base_tile_url(zoom: int, x: int, y: int) -> str:
+    return f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png"
+
+
+def flow_tile_url(zoom: int, x: int, y: int, key: str) -> str:
+    query = urllib.parse.urlencode({"key": key, "thickness": "8"})
+    return f"https://api.tomtom.com/traffic/map/4/tile/flow/relative/{zoom}/{x}/{y}.png?{query}"
+
+
+def _world_pixel(latitude: float, longitude: float, zoom: int) -> tuple[float, float]:
+    scale = 256 * (2**zoom)
+    sine = math.sin(math.radians(latitude))
+    sine = min(0.9999, max(-0.9999, sine))
+    x = (longitude + 180.0) / 360.0 * scale
+    y = (0.5 - math.log((1 + sine) / (1 - sine)) / (4 * math.pi)) * scale
+    return x, y
+
+
+def _lat_lon(pixel_x: float, pixel_y: float, zoom: int) -> tuple[float, float]:
+    scale = 256 * (2**zoom)
+    longitude = pixel_x / scale * 360.0 - 180.0
+    mercator = math.pi - 2.0 * math.pi * pixel_y / scale
+    latitude = math.degrees(math.atan(math.sinh(mercator)))
+    return latitude, longitude
+
+
+def view_bbox(
+    latitude: float = CENTER[0],
+    longitude: float = CENTER[1],
+    zoom: int = ZOOM,
+    width: int = MAP_WIDTH_PX,
+    height: int = MAP_HEIGHT_PX,
+) -> tuple[float, float, float, float]:
+    """Return minLon, minLat, maxLon, maxLat for the on-screen map."""
+    center_x, center_y = _world_pixel(latitude, longitude, zoom)
+    south, west = _lat_lon(center_x - width / 2, center_y + height / 2, zoom)
+    north, east = _lat_lon(center_x + width / 2, center_y - height / 2, zoom)
+    return west, south, east, north
+
+
+def incident_url(key: str, bbox: tuple[float, float, float, float]) -> str:
+    west, south, east, north = bbox
     query = urllib.parse.urlencode(
         {
             "key": key,
-            "computeTravelTimeFor": "all",
-            "traffic": "true",
-            "routeType": "fastest",
-            "travelMode": "car",
-            "routeRepresentation": "summaryOnly",
+            "bbox": f"{west:.5f},{south:.5f},{east:.5f},{north:.5f}",
+            "fields": "{incidents{properties{magnitudeOfDelay,events{description},from,to}}}",
+            "language": "en-GB",
+            "timeValidityFilter": "present",
         }
     )
-    return f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json?{query}"
+    return "https://api.tomtom.com/traffic/services/5/incidentDetails?" + query
 
 
-def _optional_int(value) -> int | None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return None
-    return int(value)
+def _clean(value) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.split())
 
 
-def parse_route_body(body: dict) -> dict:
-    """Pull live, typical, and free-flow seconds out of a Calculate Route body."""
-    routes = body.get("routes") if isinstance(body, dict) else None
-    if not routes:
-        raise UpstreamError("no route")
-    summary = routes[0].get("summary") if isinstance(routes[0], dict) else None
-    if not isinstance(summary, dict):
-        raise UpstreamError("no summary")
-    live = _optional_int(summary.get("travelTimeInSeconds"))
-    if live is None:
-        raise UpstreamError("no travel time")
+def parse_incidents(body) -> list[dict]:
+    """Keep only incident sentences the provider actually sent."""
+    if not isinstance(body, dict):
+        return []
+    raw = body.get("incidents")
+    if not isinstance(raw, list):
+        return []
+    found = []
+    for feature in raw:
+        if not isinstance(feature, dict):
+            continue
+        props = feature.get("properties")
+        if not isinstance(props, dict):
+            props = feature
+        events = props.get("events")
+        descriptions = []
+        if isinstance(events, list):
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                text = _clean(event.get("description"))
+                if text and text not in descriptions:
+                    descriptions.append(text)
+        if not descriptions:
+            continue
+        sentence = "; ".join(descriptions)
+        origin = _clean(props.get("from"))
+        if origin:
+            sentence = f"{sentence} · {origin}"
+        magnitude = props.get("magnitudeOfDelay")
+        if isinstance(magnitude, bool) or not isinstance(magnitude, (int, float)):
+            magnitude = 0
+        found.append((int(magnitude), sentence))
+    found.sort(key=lambda item: item[0], reverse=True)
+    return [{"text": sentence} for _magnitude, sentence in found[:INCIDENT_LIMIT]]
+
+
+def _report(colours: bool, reason: str | None, message: str | None, incidents: list[dict]) -> dict:
     return {
-        "liveSeconds": live,
-        "typicalSeconds": _optional_int(summary.get("historicTrafficTravelTimeInSeconds")),
-        "freeFlowSeconds": _optional_int(summary.get("noTrafficTravelTimeInSeconds")),
-        "distanceMeters": _optional_int(summary.get("lengthInMeters")),
-    }
-
-
-def _empty_route(route: dict) -> dict:
-    return {
-        "id": route["id"],
-        "from": route["origin_name"],
-        "to": route["destination_name"],
-        "available": False,
-    }
-
-
-def _missing_key_report() -> dict:
-    return {
-        "available": False,
-        "reason": "missing_key",
-        "message": "Live times need a TomTom key on the server.",
-        "routes": [_empty_route(route) for route in ROUTES],
+        "available": colours,
+        "colours": colours,
+        "reason": reason,
+        "message": message,
+        "center": {"latitude": CENTER[0], "longitude": CENTER[1]},
+        "zoom": ZOOM,
+        "incidents": incidents,
     }
 
 
@@ -111,32 +162,27 @@ def build_report(fetch: FetchJson | None = None, key: str | None = None) -> dict
     if key is None:
         key = tomtom_api_key()
     if not key:
-        return _missing_key_report()
+        return _report(False, "missing_key", "Traffic colours unavailable", [])
     fetcher = fetch or get_json
+    try:
+        # A failed call means we will not paint flow tiles either.
+        body = fetcher(incident_url(key, view_bbox()))
+    except Exception:
+        return _report(False, "upstream", "Traffic colours unavailable", [])
+    return _report(True, None, None, parse_incidents(body))
 
-    def one(route: dict) -> dict:
-        url = route_url(key, route["origin"], route["destination"])
-        try:
-            parsed = parse_route_body(fetcher(url))
-        except Exception:
-            # Do not log the exception: the request URL contains the API key.
-            return _empty_route(route)
-        parsed.update(
-            {
-                "id": route["id"],
-                "from": route["origin_name"],
-                "to": route["destination_name"],
-                "available": True,
-            }
-        )
-        return parsed
 
-    with ThreadPoolExecutor(max_workers=len(ROUTES)) as pool:
-        routes = list(pool.map(one, ROUTES))
-    any_live = any(route["available"] for route in routes)
-    return {
-        "available": any_live,
-        "reason": None if any_live else "upstream",
-        "message": None if any_live else "Travel times unavailable",
-        "routes": routes,
-    }
+def fetch_tile(kind: str, zoom: int, x: int, y: int) -> bytes:
+    if kind == "base":
+        url = base_tile_url(zoom, x, y)
+    elif kind == "flow":
+        key = tomtom_api_key()
+        if not key:
+            raise UpstreamError("no key")
+        url = flow_tile_url(zoom, x, y, key)
+    else:
+        raise UpstreamError("unknown tile")
+    data = get_bytes(url, timeout=8, headers={"Accept": "image/png"})
+    if not data.startswith(b"\x89PNG"):
+        raise UpstreamError("not a png")
+    return data

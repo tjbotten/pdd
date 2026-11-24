@@ -2,7 +2,7 @@
 
 One web page for the two Hikvision DS-D6055UN-D/S 55-inch floor stands. Both open the same URL. The page is laid out for a portrait panel at **1080×1920**.
 
-Four bands stack to fill the screen: traffic, weather, news, announcements. A band that cannot load shows a short unavailable line and leaves the others up. The display hides the pointer.
+The screen is a 2×2 board: traffic map, weather, company events, news. A quadrant that cannot load shows a short unavailable line and leaves the others up. The display hides the pointer.
 
 The firmware in the rest of this repo is unrelated. Nothing here is flashed to the ESP32 boards.
 
@@ -39,21 +39,19 @@ Turn the panel's screensaver off. Both stands use that same address. Announcemen
 | Variable | Required | What it does |
 | --- | --- | --- |
 | `KIOSK_ADMIN_PASSWORD` | To post notices | Password for `/admin`. If it is unset, the admin page says so and refuses login. |
-| `TOMTOM_API_KEY` | No | Live driving times. Without it the traffic band lists the three routes and says the key is missing. No times are made up. |
+| `TOMTOM_API_KEY` | No | Traffic colours and incident lines on the Rosebank map. Without it the map is plain and the colour legend says it is unavailable. No delays or accidents are made up. |
 | `KIOSK_DB_PATH` | No | SQLite file. Default `kiosk/data/announcements.db`. |
 | `PORT` | No | Default `8080`. |
 | `KIOSK_HOST` | No | Default `0.0.0.0`, so both stands on the LAN can connect. |
 | `KIOSK_COOKIE_SECURE` | No | Set to `1` when the admin page is served over HTTPS. |
 
-## Bands
+## Quadrants
 
-**Traffic.** Rosebank → Sandton, Rosebank → Centurion, Rosebank → Roodepoort. Refreshed every 30 minutes. The large number is the live driving time. Under it is the delay against the typical time for this time of day, plus the free-flow time. Points used, from OpenStreetMap: Oxford Road in Rosebank, Sandton City, Centurion Mall, Westgate in Roodepoort.
+**Traffic.** A street map centred on Rosebank (about -26.146, 28.041), zoomed to the surrounding suburbs. The base map is [OpenStreetMap](https://www.openstreetmap.org/copyright) and it always shows. Traffic colours are TomTom relative-flow tiles (green light, amber moderate, red heavy). Incident lines under the map are the descriptions TomTom returns for that view, and only those. Refreshed every 30 minutes. One incident lookup every 30 minutes, plus the flow tiles for that view. If a refresh fails, the previous colours stay up until the next lookup. Without `TOMTOM_API_KEY`, or if TomTom rejects the key, the map stays plain and the legend says the colours are unavailable.
 
-Times come from the [TomTom Routing API](https://developer.tomtom.com/) `calculateRoute` call with `traffic=true` and `computeTravelTimeFor=all`. That returns `travelTimeInSeconds` (leave now, live traffic), `historicTrafficTravelTimeInSeconds` (typical), and `noTrafficTravelTimeInSeconds` (free-flow). Three routes every 30 minutes is about 144 calls a day. A failed route is marked unavailable on its own row. If a refresh fails, the previous times stay up until the next lookup.
+**Weather.** Johannesburg and Pretoria from [Open-Meteo](https://open-meteo.com/), which needs no key. Current temperature and conditions, today's high and low, and the next three days. Refreshed every 10 minutes.
 
-**Weather.** Johannesburg and Pretoria from [Open-Meteo](https://open-meteo.com/), which needs no key. Current temperature, conditions, wind, today and tomorrow's high and low, and the next four hours. Refreshed every 10 minutes.
-
-**News.** One story at a time, advancing every 18 seconds. The feeds are refetched every 3 minutes.
+**News.** A short list of headlines, mixing EWN and Sky News. The feeds are refetched every 3 minutes.
 
 | | |
 | --- | --- |
@@ -62,9 +60,9 @@ Times come from the [TomTom Routing API](https://developer.tomtom.com/) `calcula
 
 Sky's address is the World feed linked from https://news.sky.com/info/rss. EWN no longer publishes RSS: `https://ewn.co.za/RSS%20Feeds/Latest%20News` returns 404, and the current homepage has no RSS autodiscovery link. `_payload.json` is the public article list the EWN homepage itself renders. Headlines are taken from those responses only.
 
-If one wire fails, the board keeps cycling the other. If both fail, the news band says it is unavailable.
+If one wire fails, the list keeps the other. If both fail, the news quadrant says it is unavailable.
 
-**Announcements.** Shared. Add and remove them at `/admin`. The screens poll every 30 seconds. Posts live in SQLite. A new database has no notices. Each notice is at most 180 characters. Several notices rotate one at a time.
+**Company events.** Shared announcements. Add and remove them at `/admin`. The screens poll every 30 seconds and list the current notices. Posts live in SQLite. A new database has no notices. Each notice is at most 180 characters. The calendar graphic shows today's date in Johannesburg. It is not an event.
 
 ## Checks
 

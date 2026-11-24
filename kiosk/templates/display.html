@@ -9,38 +9,37 @@
 </head>
 <body>
   <main class="board">
-    <section id="band-traffic" class="band band-traffic" aria-label="Traffic">
-      <header class="band-head">
-        <p class="kicker">Traffic</p>
-        <p id="clock" class="clock">––:––</p>
-      </header>
-      <div id="traffic-body" class="band-body">
-        <p class="status">Loading travel times</p>
-      </div>
+    <section id="band-traffic" class="panel panel-traffic" aria-label="Johannesburg traffic">
+      <h2>Johannesburg Traffic</h2>
+      <div id="traffic-map" class="traffic-map"></div>
+      <div id="traffic-legend" class="legend"></div>
+      <div id="traffic-notes" class="notes"></div>
     </section>
 
-    <section id="band-weather" class="band band-weather" aria-label="Weather">
-      <header class="band-head">
-        <p class="kicker">Weather</p>
-        <p class="subkicker">Johannesburg and Pretoria</p>
-      </header>
-      <div id="weather-body" class="band-body">
+    <section id="band-weather" class="panel panel-weather" aria-label="Current weather">
+      <h2>Current Weather</h2>
+      <div id="weather-body" class="weather-body">
         <p class="status">Loading weather</p>
       </div>
     </section>
 
-    <section id="band-news" class="band band-news" aria-label="News">
-      <div id="news-body" class="band-body news-body">
-        <p class="kicker">News</p>
-        <p class="status">Loading headlines</p>
+    <section id="band-announcements" class="panel panel-events" aria-label="Company events">
+      <h2>Company Events</h2>
+      <div class="events-row">
+        <div id="announcement-body" class="events-list">
+          <p class="status">Loading announcements</p>
+        </div>
+        <div class="calendar" aria-hidden="true">
+          <div class="calendar-top"></div>
+          <div id="calendar-day" class="calendar-day"></div>
+        </div>
       </div>
-      <div class="progress" aria-hidden="true"><span id="news-progress"></span></div>
     </section>
 
-    <section id="band-announcements" class="band band-announcements" aria-label="Announcements">
-      <div id="announcement-body" class="band-body news-body">
-        <p class="kicker">Announcements</p>
-        <p class="status">Loading announcements</p>
+    <section id="band-news" class="panel panel-news" aria-label="News">
+      <h2>News</h2>
+      <div id="news-body" class="news-body">
+        <p class="status">Loading headlines</p>
       </div>
     </section>
   </main>
