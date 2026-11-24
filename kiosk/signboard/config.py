@@ -14,11 +14,12 @@ JOHANNESBURG = ZoneInfo("Africa/Johannesburg")
 
 # How often the server is willing to hit upstreams. The display polls on the
 # same cadence, so two kiosks share one fetch.
-TRAFFIC_TTL_SECONDS = 60
+TRAFFIC_TTL_SECONDS = 30 * 60
 WEATHER_TTL_SECONDS = 10 * 60
 NEWS_TTL_SECONDS = 3 * 60
-# Keep the last good payload briefly if a refresh fails.
-TRAFFIC_GRACE_SECONDS = 5 * 60
+# Keep the last good payload if a refresh fails. Traffic grace covers the
+# next 30-minute lookup, so one miss does not blank the band.
+TRAFFIC_GRACE_SECONDS = 60 * 60
 WEATHER_GRACE_SECONDS = 30 * 60
 NEWS_GRACE_SECONDS = 15 * 60
 

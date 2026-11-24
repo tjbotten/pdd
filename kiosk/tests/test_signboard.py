@@ -19,6 +19,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from signboard import news, store, traffic, weather
+from signboard.config import TRAFFIC_GRACE_SECONDS, TRAFFIC_TTL_SECONDS
 from signboard.http_util import UpstreamError
 from signboard.server import serve
 
@@ -26,6 +27,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TrafficTests(unittest.TestCase):
+    def test_lookup_interval_is_thirty_minutes(self):
+        self.assertEqual(TRAFFIC_TTL_SECONDS, 30 * 60)
+        self.assertGreater(TRAFFIC_GRACE_SECONDS, TRAFFIC_TTL_SECONDS)
+        js = (ROOT / "static" / "display.js").read_text(encoding="utf-8")
+        self.assertIn("var TRAFFIC_MS = 30 * 60 * 1000;", js)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Refreshed every 30 minutes.", readme)
+        self.assertNotIn("60 seconds", readme)
+
     def test_missing_key_does_not_invent_times_or_call_upstream(self):
         def fetch(_url):
             raise AssertionError("upstream was called without a key")

@@ -1,5 +1,5 @@
 (function () {
-  var TRAFFIC_MS = 60000;
+  var TRAFFIC_MS = 30 * 60 * 1000;
   var WEATHER_MS = 600000;
   var NEWS_MS = 180000;
   var POST_MS = 30000;

@@ -47,9 +47,9 @@ Turn the panel's screensaver off. Both stands use that same address. Announcemen
 
 ## Bands
 
-**Traffic.** Rosebank → Sandton, Rosebank → Centurion, Rosebank → Roodepoort. Refreshed about every 60 seconds. The large number is the live driving time. Under it is the delay against the typical time for this time of day, plus the free-flow time. Points used, from OpenStreetMap: Oxford Road in Rosebank, Sandton City, Centurion Mall, Westgate in Roodepoort.
+**Traffic.** Rosebank → Sandton, Rosebank → Centurion, Rosebank → Roodepoort. Refreshed every 30 minutes. The large number is the live driving time. Under it is the delay against the typical time for this time of day, plus the free-flow time. Points used, from OpenStreetMap: Oxford Road in Rosebank, Sandton City, Centurion Mall, Westgate in Roodepoort.
 
-Times come from the [TomTom Routing API](https://developer.tomtom.com/) `calculateRoute` call with `traffic=true` and `computeTravelTimeFor=all`. That returns `travelTimeInSeconds` (leave now, live traffic), `historicTrafficTravelTimeInSeconds` (typical), and `noTrafficTravelTimeInSeconds` (free-flow). A free developer key is enough to start; three routes a minute is about 4,300 calls a day, which is more than TomTom's usual free daily allowance, so a busy board may need a plan with a higher quota. A failed route is marked unavailable on its own row.
+Times come from the [TomTom Routing API](https://developer.tomtom.com/) `calculateRoute` call with `traffic=true` and `computeTravelTimeFor=all`. That returns `travelTimeInSeconds` (leave now, live traffic), `historicTrafficTravelTimeInSeconds` (typical), and `noTrafficTravelTimeInSeconds` (free-flow). Three routes every 30 minutes is about 144 calls a day. A failed route is marked unavailable on its own row. If a refresh fails, the previous times stay up until the next lookup.
 
 **Weather.** Johannesburg and Pretoria from [Open-Meteo](https://open-meteo.com/), which needs no key. Current temperature, conditions, wind, today and tomorrow's high and low, and the next four hours. Refreshed every 10 minutes.
 
