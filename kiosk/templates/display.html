@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Lobby board</title>
+  <link rel="stylesheet" href="/static/display.css">
+</head>
+<body>
+  <main class="board">
+    <section id="band-traffic" class="band band-traffic" aria-label="Traffic">
+      <header class="band-head">
+        <p class="kicker">Traffic</p>
+        <p id="clock" class="clock">––:––</p>
+      </header>
+      <div id="traffic-body" class="band-body">
+        <p class="status">Loading travel times</p>
+      </div>
+    </section>
+
+    <section id="band-weather" class="band band-weather" aria-label="Weather">
+      <header class="band-head">
+        <p class="kicker">Weather</p>
+        <p class="subkicker">Johannesburg and Pretoria</p>
+      </header>
+      <div id="weather-body" class="band-body">
+        <p class="status">Loading weather</p>
+      </div>
+    </section>
+
+    <section id="band-news" class="band band-news" aria-label="News">
+      <div id="news-body" class="band-body news-body">
+        <p class="kicker">News</p>
+        <p class="status">Loading headlines</p>
+      </div>
+      <div class="progress" aria-hidden="true"><span id="news-progress"></span></div>
+    </section>
+
+    <section id="band-announcements" class="band band-announcements" aria-label="Announcements">
+      <div id="announcement-body" class="band-body news-body">
+        <p class="kicker">Announcements</p>
+        <p class="status">Loading announcements</p>
+      </div>
+    </section>
+  </main>
+  <script src="/static/display.js"></script>
+</body>
+</html>

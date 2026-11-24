@@ -6,3 +6,7 @@
 *.bin
 sdkconfig.*
 .DS_Store
+__pycache__/
+*.pyc
+kiosk/.env
+kiosk/data/
