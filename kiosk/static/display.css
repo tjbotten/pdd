@@ -1,0 +1,297 @@
+* {
+  box-sizing: border-box;
+  cursor: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #d7dde4;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  font-family: "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
+  color: #fff;
+  font-weight: 700;
+}
+
+.board {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "traffic weather"
+    "events news";
+  gap: 12px;
+  padding: 12px;
+  transform-origin: 0 0;
+  background: #e8edf2;
+}
+
+.panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+}
+
+.panel-traffic { grid-area: traffic; background: #0c1830; }
+.panel-weather { grid-area: weather; background: linear-gradient(180deg, #1d4e9e 0%, #14367a 100%); }
+.panel-events { grid-area: events; background: #0033A1; color: #fff; position: relative; }
+.panel-news { grid-area: news; background: #0c1830; }
+
+.panel h2 {
+  margin: 0;
+  padding: 18px 16px 10px;
+  text-align: center;
+  font-size: 42px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.traffic-map {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 280px;
+  margin: 0 16px;
+  overflow: hidden;
+  background: #c5ced8;
+  border-radius: 4px;
+}
+
+.tile {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+}
+
+.tile-flow {
+  z-index: 1;
+}
+
+.map-credit {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 2;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c2430;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.legend,
+.notes {
+  padding: 10px 22px 0;
+}
+
+.notes {
+  padding-bottom: 16px;
+  min-height: 0;
+}
+
+.legend p,
+.notes li,
+.status {
+  margin: 0 0 8px;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.legend p {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.swatch-light { background: #2e9e45; }
+.swatch-moderate { background: #f0b429; }
+.swatch-heavy { background: #e23b2f; }
+
+.incident-list {
+  margin: 0;
+  padding: 0 0 0 28px;
+}
+
+.incident-list li {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0 0 8px;
+}
+
+.weather-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 18px 16px;
+}
+
+.city {
+  min-height: 0;
+}
+
+.city + .city {
+  border-top: 2px solid rgba(255, 255, 255, 0.28);
+  padding-top: 12px;
+}
+
+.city-name {
+  margin: 0 0 2px;
+  font-size: 26px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.temp {
+  font-size: 96px;
+  line-height: 0.9;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.city-secondary .temp {
+  font-size: 72px;
+}
+
+.condition {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  max-width: 220px;
+}
+
+.meta,
+.highlow {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.highlow {
+  display: flex;
+  gap: 28px;
+}
+
+.days {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 92px;
+}
+
+.day-name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.day-high {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.day-low {
+  font-size: 22px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.events-list {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 22px 108px;
+}
+
+.bank-logo {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  width: 300px;
+  height: auto;
+}
+
+.bullets,
+.headlines {
+  margin: 0;
+  padding: 8px 0 0 34px;
+}
+
+.bullets li,
+.headlines li {
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 800;
+  margin: 0 0 18px;
+}
+
+.headlines {
+  padding-left: 28px;
+}
+
+.headlines li {
+  font-size: 32px;
+}
+
+.source {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
+.headline {
+  margin: 0;
+}
+
+.news-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 22px 18px;
+}
+
+.panel .status {
+  padding: 8px 4px 0;
+}

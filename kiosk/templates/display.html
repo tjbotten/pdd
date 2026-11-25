@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Lobby board</title>
+  <link rel="stylesheet" href="/static/display.css">
+</head>
+<body>
+  <main class="board">
+    <section id="band-traffic" class="panel panel-traffic" aria-label="Johannesburg traffic">
+      <h2>Johannesburg Traffic</h2>
+      <div id="traffic-map" class="traffic-map"></div>
+      <div id="traffic-legend" class="legend"></div>
+      <div id="traffic-notes" class="notes"></div>
+    </section>
+
+    <section id="band-weather" class="panel panel-weather" aria-label="Current weather">
+      <h2>Current Weather</h2>
+      <div id="weather-body" class="weather-body">
+        <p class="status">Loading weather</p>
+      </div>
+    </section>
+
+    <section id="band-announcements" class="panel panel-events" aria-label="Company events">
+      <h2>Company Events</h2>
+      <div id="announcement-body" class="events-list">
+        <p class="status">Loading announcements</p>
+      </div>
+      <img class="bank-logo" src="/static/standard-bank-logo.svg" alt="Standard Bank">
+    </section>
+
+    <section id="band-news" class="panel panel-news" aria-label="News">
+      <h2>News</h2>
+      <div id="news-body" class="news-body">
+        <p class="status">Loading headlines</p>
+      </div>
+    </section>
+  </main>
+  <script src="/static/display.js"></script>
+</body>
+</html>
