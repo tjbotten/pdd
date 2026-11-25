@@ -62,7 +62,7 @@ Sky's address is the World feed linked from https://news.sky.com/info/rss. EWN n
 
 If one wire fails, the list keeps the other. If both fail, the news quadrant says it is unavailable.
 
-**Company events.** Shared announcements. Add and remove them at `/admin`. The screens poll every 30 seconds and list the current notices. Posts live in SQLite. A new database has no notices. Each notice is at most 180 characters. The calendar graphic shows today's date in Johannesburg. It is not an event.
+**Company events.** Shared announcements on a Standard Bank blue panel (`#0033A1`), with the Standard Bank wordmark in the bottom-left corner. The wordmark file is `kiosk/static/standard-bank-logo.svg`, the same mark the bank serves on standardbank.com, stored with the app rather than loaded from their site. Add and remove notices at `/admin`. The screens poll every 30 seconds and list the current notices. Posts live in SQLite. A new database has no notices. Each notice is at most 180 characters.
 
 ## Checks
 

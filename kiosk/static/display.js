@@ -299,24 +299,6 @@
     body.appendChild(list);
   }
 
-  function johannesburgDay(date) {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Africa/Johannesburg",
-        day: "numeric"
-      }).format(date);
-    } catch (error) {
-      return "";
-    }
-  }
-
-  function paintCalendar() {
-    var node = document.getElementById("calendar-day");
-    if (!node) return;
-    var day = johannesburgDay(new Date());
-    if (day) node.textContent = day;
-  }
-
   function load(url, render) {
     fetch(url, { cache: "no-store" })
       .then(function (response) {
@@ -335,7 +317,6 @@
   function refreshPosts() { load("/api/announcements", renderPosts); }
 
   fit();
-  paintCalendar();
   window.addEventListener("resize", fit);
   refreshTraffic();
   refreshWeather();
@@ -345,7 +326,6 @@
   setInterval(refreshWeather, WEATHER_MS);
   setInterval(refreshNews, NEWS_MS);
   setInterval(refreshPosts, POST_MS);
-  setInterval(paintCalendar, 60000);
   requestAnimationFrame(function () {
     if (lastTraffic) drawMap(lastTraffic);
   });
